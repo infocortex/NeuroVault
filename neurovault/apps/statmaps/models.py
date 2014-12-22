@@ -143,6 +143,8 @@ def upload_img_to(instance, filename):
     return os.path.join('images',str(instance.collection.id), filename)
 
 
+upload_to = upload_img_to
+
 def upload_nidm_to(instance, filename):
     nidm_subdir = instance.zip_file.name.replace('.zip','')
     return os.path.join('images',str(instance.collection.id), nidm_subdir, filename)
@@ -156,7 +158,7 @@ class ValueTaggedItem(GenericTaggedItemBase):
     tag = models.ForeignKey(KeyValueTag, related_name="tagged_items")
 
 
-class BaseCollectionItem(models.Model):
+class BaseCollectionItem(PolymorphicModel):
     name = models.CharField(max_length=200, null=False, blank=False)
     description = models.TextField(blank=False)
     collection = models.ForeignKey(Collection)
@@ -170,9 +172,6 @@ class BaseCollectionItem(models.Model):
     def set_name(self, new_name):
         self.name = new_name
 
-    class Meta:
-        abstract = True
-
     def save(self):
         self.collection.modify_date = datetime.now()
         self.collection.save()
@@ -184,7 +183,7 @@ class BaseCollectionItem(models.Model):
         super(BaseCollectionItem, self).delete()
 
 
-class Image(PolymorphicModel, BaseCollectionItem):
+class Image(BaseCollectionItem):
     file = models.FileField(upload_to=upload_img_to, null=False, blank=False, storage=NiftiGzStorage(), verbose_name='File with the unthresholded map (.img, .nii, .nii.gz)')
 
     def get_absolute_url(self):
@@ -231,7 +230,7 @@ class Image(PolymorphicModel, BaseCollectionItem):
         unique_together = ("collection", "name")
 
 
-class BaseStatisticMap(Image):
+class StatisticMap(Image):
     Z = 'Z'
     T = 'T'
     F = 'F'
@@ -250,12 +249,6 @@ class BaseStatisticMap(Image):
                     help_text=("Type of statistic that is the basis of the inference"),
                     verbose_name="Map type",
                     max_length=200, null=False, blank=False, choices=MAP_TYPE_CHOICES)
-
-    class Meta:
-        abstract = True
-
-
-class StatisticMap(BaseStatisticMap):
     statistic_parameters = models.FloatField(help_text="Parameters of the null distribution of the test statisic, typically degrees of freedom (should be clear from the test statistic what these are).", null=True, verbose_name="Statistic parameters", blank=True)
     smoothness_fwhm = models.FloatField(help_text="Noise smoothness for statistical inference; this is the estimated smoothness used with Random Field Theory or a simulation-based inference method.", verbose_name="Smoothness FWHM", null=True, blank=True)
     contrast_definition = models.CharField(help_text="Exactly what terms are subtracted from what? Define these in terms of task or stimulus conditions (e.g., 'one-back task with objects versus zero-back task with objects') instead of underlying psychological concepts (e.g., 'working memory').", verbose_name="Contrast definition", max_length=200, null=True, blank=True)
@@ -282,12 +275,30 @@ class NIDMResults(BaseCollectionItem):
         verbose_name_plural = "NIDMResults"
 
 
-class NIDMResultStatisticMap(BaseStatisticMap):
+class NIDMResultStatisticMap(Image):
     nidm_results_zip = models.ForeignKey(NIDMResults)
 
     #def save(self, *args, **kwargs):
     #    # enforce uneditable nifti
     #    super(NIDMResultStatisticMap, self).save(*args, **kwargs)
+    Z = 'Z'
+    T = 'T'
+    F = 'F'
+    X2 = 'X2'
+    P = 'P'
+    OTHER = 'Other'
+    MAP_TYPE_CHOICES = (
+        (T, 'T map'),
+        (Z, 'Z map'),
+        (F, 'F map'),
+        (X2, 'Chi squared map'),
+        (P, 'P map (given null hypothesis)'),
+        (OTHER, 'Other'),
+    )
+    map_type = models.CharField(
+                    help_text=("Type of statistic that is the basis of the inference"),
+                    verbose_name="Map type",
+                    max_length=200, null=False, blank=False, choices=MAP_TYPE_CHOICES)
 
 
 class Atlas(Image):

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from neurovault.apps.statmaps.models import Collection, Image, StatisticMap, Atlas, \
-    NIDMResults, NIDMResultStatisticMap
+    NIDMResults, NIDMResultStatisticMap, BaseCollectionItem
 from neurovault.apps.statmaps.forms import StatisticMapForm, AtlasForm, \
     NIDMResultStatisticMapForm, NIDMResultsForm
 from polymorphic.admin import PolymorphicParentModelAdmin, PolymorphicChildModelAdmin
@@ -30,23 +30,24 @@ class NIDMStatisticMapAdmin(PolymorphicChildModelAdmin, BaseImageAdmin):
     readonly_fields = BaseImageAdmin.readonly_fields + ['nidm_results_zip']
 
 
-class ImageAdmin(PolymorphicParentModelAdmin):
-    base_model = Image
-    child_models = (
-        (StatisticMap, StatisticMapAdmin),
-        (Atlas, AtlasAdmin),
-        (NIDMResultStatisticMap, NIDMStatisticMapAdmin)
-    )
-
-
-class NIDMResultsAdmin(BaseImageAdmin):
-    form = NIDMResultsForm
+class NIDMResultsAdmin(PolymorphicChildModelAdmin, BaseImageAdmin):
+    base_model = NIDMResults
+    base_form = NIDMResultsForm
 
     def save_model(self, request, obj, form, change):
         instance = form.save(commit=False)
         instance.save()
         form.save_nidm()
 
-admin.site.register(Image, ImageAdmin)
+
+class BaseCollectionItemAdmin(PolymorphicParentModelAdmin):
+    base_model = BaseCollectionItem
+    child_models = (
+        (StatisticMap, StatisticMapAdmin),
+        (Atlas, AtlasAdmin),
+        (NIDMResultStatisticMap, NIDMStatisticMapAdmin),
+        (NIDMResults, NIDMResultsAdmin)
+    )
+
+admin.site.register(BaseCollectionItem, BaseCollectionItemAdmin)
 admin.site.register(Collection)
-admin.site.register(NIDMResults,NIDMResultsAdmin)

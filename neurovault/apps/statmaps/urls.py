@@ -21,7 +21,7 @@ class MyCollectionsListView(ListView):
 
     def get_queryset(self):
         return Collection.objects.filter(Q(contributors=self.request.user)
-                            | Q(owner=self.request.user)).annotate(n_images=Count('image'))
+                            | Q(owner=self.request.user)).annotate(n_images=Count('basecollectionitem'))
 
 urlpatterns = patterns('',
     url(r'^my_collections/$',
@@ -29,7 +29,7 @@ urlpatterns = patterns('',
         name='my_collections'),
     url(r'^collections/$',
         ListView.as_view(
-            queryset=Collection.objects.filter(private=False).annotate(n_images=Count('image')),
+            queryset=Collection.objects.filter(private=False).annotate(n_images=Count('basecollectionitem')),
             context_object_name='collections',
             template_name='statmaps/collections_index.html.haml'),
         name='collections_list'),
@@ -120,10 +120,10 @@ urlpatterns = patterns('',
     url(r'^media/images/(?P<collection_cid>\d+|[A-Z]{8})/pycortex_all/(?P<path>.*)$',
         serve_pycortex,
         name='serve_pycortex_collection'),
-    url(r'^api/atlas_query_region/$', 
+    url(r'^api/atlas_query_region/$',
         atlas_query_region,
         name = 'atlas_query_region'),
-    url(r'^api/atlas_query_voxel/$', 
+    url(r'^api/atlas_query_voxel/$',
         atlas_query_voxel,
         name = 'atlas_query_voxel')
 

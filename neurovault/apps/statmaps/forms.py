@@ -15,7 +15,7 @@ from crispy_forms.layout import Layout, Div, Submit, HTML, Button, Row, Field, H
 from crispy_forms.bootstrap import AppendedText, PrependedText, FormActions, TabHolder, Tab
 
 from .models import Collection, Image, ValueTaggedItem, User, StatisticMap, Atlas, \
-    NIDMResults, NIDMResultStatisticMap
+    NIDMResults, NIDMResultStatisticMap, BaseCollectionItem
 
 from django.forms.forms import Form
 from django.forms.fields import FileField
@@ -443,7 +443,10 @@ class PolymorphicImageForm(ImageForm):
             if self.instance.polymorphic_ctype.model == 'atlas':
                 self.fields = AtlasForm.base_fields
             elif self.instance.polymorphic_ctype.model == 'nidmresultstatisticmap':
-                self.fields = NIDMResultStatisticMapForm(instance=self.instance).fields
+                #self.fields = NIDMResultStatisticMapForm(instance=self.instance).fields
+                self.fields = NIDMResultStatisticMapForm.base_fields
+            elif self.instance.polymorphic_ctype.model == 'nidmresults':
+                self.fields = NIDMResultsForm.base_fields
             else:
                 self.fields = StatisticMapForm.base_fields
 
@@ -523,7 +526,7 @@ class CollectionInlineFormset(BaseInlineFormSet):
 
 
 CollectionFormSet = inlineformset_factory(
-    Collection, Image, form=PolymorphicImageForm,
+    Collection, BaseCollectionItem, form=PolymorphicImageForm,
     exclude=['json_path', 'nifti_gz_file', 'collection'],
     extra=1, formset=CollectionInlineFormset, can_delete=False)
 
@@ -621,12 +624,12 @@ class NIDMResultsForm(forms.ModelForm):
 
 
 class NIDMResultStatisticMapForm(ImageForm):
-    class Meta(ImageForm.Meta):
+    class Meta:
         model = NIDMResultStatisticMap
         fields = ('name', 'collection', 'description', 'map_type',
                   'file', 'tags', 'nidm_results_zip')
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, user, *args, **kwargs):
         super(NIDMResultStatisticMapForm,self).__init__(*args,**kwargs)
         self.helper = FormHelper(self)
         self.helper.form_class = 'form-horizontal'
@@ -639,14 +642,4 @@ class NIDMResultStatisticMapForm(ImageForm):
                 self.fields[fld].widget.attrs['disabled'] = 'disabled'
 
             self.fields['file'].widget = PathOnlyWidget()
-
-
-
-
-
-
-
-
-
-
 
